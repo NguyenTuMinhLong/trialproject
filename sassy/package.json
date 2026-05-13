@@ -1,0 +1,14 @@
+{
+  "name": "saasy",
+  "private": true,
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "server": "yarn workspace server dev",
+    "client": "yarn workspace client dev",
+    "build": "yarn workspaces run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+}
