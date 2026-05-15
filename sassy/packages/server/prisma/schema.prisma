@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  name          String?
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  githubId      String?      @unique
+  googleId      String?      @unique
+  role          String       @default("USER")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  Account       Account[]
+  Session       Session[]
+  Team          Team[]
+  TeamMember    TeamMember[]
+}
+
+model Account {
+  id                String  @id
+  userId            String
+  provider          String
+  providerAccountId String
+  refreshToken      String?
+  accessToken       String?
+  expiresAt         Int?
+  tokenType         String?
+  scope             String?
+  idToken           String?
+  sessionState      String?
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Team {
+  id         String       @id
+  name       String
+  ownerId    String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime
+  Invitation Invitation[]
+  Project    Project[]
+  User       User         @relation(fields: [ownerId], references: [id])
+  TeamMember TeamMember[]
+}
+
+model TeamMember {
+  id     String @id
+  teamId String
+  userId String
+  role   String @default("MEMBER")
+  Team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model Project {
+  id          String   @id
+  name        String
+  description String?
+  teamId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  Team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model Invitation {
+  id        String   @id
+  email     String
+  token     String   @unique
+  teamId    String
+  role      String   @default("MEMBER")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  Team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([token])
+}
