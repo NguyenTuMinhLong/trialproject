@@ -1,7 +1,7 @@
 # TrialProject - SaaS Monorepo (y chang saasy)
 
 ## Giới thiệu
-Project này là **SaaS boilerplate** được xây dựng theo đúng phong cách **monorepo Yarn workspaces** giống repo `pilotpirxie/saasy`.
+Project này là **SaaS boilerplate** được xây dựng theo đúng phong cách **monorepo Yarn workspaces** 
 
 Mục tiêu: Học từ A-Z cách xây dựng một SaaS đầy đủ (Auth, Protected Route, UI đẹp, API kết nối mượt).
 
