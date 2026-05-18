@@ -1,97 +1,202 @@
+/**
+ * ============================================
+ * PRISMA SCHEMA - DATABASE MODELS
+ * ============================================
+ * 
+ * File này định nghĩa cấu trúc database (schema) cho Prisma ORM
+ * Chạy `npx prisma generate` sau khi thay đổi file này
+ * Chạy `npx prisma db push` để apply schema xuống database
+ * 
+ * Models hiện có:
+ * - User: Tài khoản người dùng
+ * - Account: OAuth accounts (Google, GitHub)
+ * - Session: User sessions
+ * - RefreshToken: JWT refresh tokens (để revoke)
+ * - VerificationToken: Tokens cho email verification, password reset
+ * - Team: Nhóm làm việc
+ * - TeamMember: Thành viên của team
+ * - Project: Dự án trong team
+ * - Invitation: Lời mời tham gia team
+ */
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
+// ============================================
+// USER MODEL
+// ============================================
 model User {
-  id            String       @id @default(cuid())
-  email         String       @unique
-  name          String?
-  password      String?
-  emailVerified DateTime?
-  image         String?
-  githubId      String?      @unique
-  googleId      String?      @unique
-  role          String       @default("USER")
+  id            String       @id @default(uuid())  // UUID primary key
+  email         String       @unique               // Email duy nhất
+  name          String?                              // Tên (optional)
+  password      String?                              // Hash password (null nếu login bằng OAuth)
+  emailVerified DateTime?                            // Thời điểm verify email (null = chưa verify)
+  image         String?                              // Avatar URL
+  githubId      String?      @unique               // GitHub OAuth ID
+  googleId      String?      @unique               // Google OAuth ID
+  role          String       @default("USER")       // USER, ADMIN, MODERATOR...
+  twoFactorEnabled  Boolean  @default(false)       // Bật/tắt 2FA
+  twoFactorSecret  String?                          // Mã hóa 2FA secret
+  twoFactorBackupCodes String?                     // JSON array các backup codes đã hash
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  Account       Account[]
-  Session       Session[]
-  Team          Team[]
-  TeamMember    TeamMember[]
+  
+  // Relations
+  Account       Account[]                            // OAuth accounts
+  Session       Session[]                           // Sessions
+  Team          Team[]                              // Teams owned
+  TeamMember    TeamMember[]                        // Teams joined
+  RefreshToken  RefreshToken[]                      // Refresh tokens
+  VerificationToken VerificationToken[]              // Verification tokens
+
+  @@map("users")  // Map to "users" table in database
 }
 
+// ============================================
+// ACCOUNT MODEL (OAuth Accounts)
+// ============================================
 model Account {
-  id                String  @id
-  userId            String
-  provider          String
-  providerAccountId String
-  refreshToken      String?
-  accessToken       String?
-  expiresAt         Int?
+  id                String  @id @default(uuid())
+  userId            String                              // Foreign key to User
+  provider          String                             // "google", "github"
+  providerAccountId  String                             // ID từ OAuth provider
+  refreshToken      String?                            // OAuth refresh token
+  accessToken       String?                            // OAuth access token
+  expiresAt         Int?                               // Token expiry timestamp
   tokenType         String?
   scope             String?
   idToken           String?
   sessionState      String?
+  
+  // Relation
   User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+  
+  @@unique([provider, providerAccountId])  // Mỗi provider chỉ có 1 account
+  @@map("Account")
 }
 
+// ============================================
+// SESSION MODEL
+// ============================================
 model Session {
-  id           String   @id
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
+  id           String   @id @default(uuid())
+  sessionToken String   @unique                    // Session identifier
+  userId       String                              // Foreign key to User
+  expires      DateTime                            // Session expiry time
+  
   User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("Session")
 }
 
+// ============================================
+// TEAM MODEL (Nhóm làm việc)
+// ============================================
 model Team {
-  id         String       @id
-  name       String
-  ownerId    String
+  id         String       @id @default(uuid())
+  name       String                                // Tên team
+  ownerId    String                               // User ID của chủ team
   createdAt  DateTime     @default(now())
   updatedAt  DateTime
-  Invitation Invitation[]
-  Project    Project[]
-  User       User         @relation(fields: [ownerId], references: [id])
-  TeamMember TeamMember[]
+  
+  // Relations
+  Invitation Invitation[]                          // Lời mời
+  Project    Project[]                             // Dự án
+  User       User     @relation(fields: [ownerId], references: [id])
+  TeamMember TeamMember[]                          // Thành viên
+  
+  @@map("Team")
 }
 
+// ============================================
+// TEAM MEMBER MODEL
+// ============================================
 model TeamMember {
-  id     String @id
-  teamId String
-  userId String
-  role   String @default("MEMBER")
-  Team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, userId])
+  id        String   @id @default(uuid())
+  teamId    String                                // Foreign key to Team
+  userId    String                                // Foreign key to User
+  role      String   @default("MEMBER")          // ADMIN, MEMBER
+  createdAt DateTime @default(now())
+  
+  Team      Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  User      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([teamId, userId])  // Mỗi user chỉ có 1 record trong 1 team
+  @@map("TeamMember")
 }
 
+// ============================================
+// PROJECT MODEL (Dự án)
+// ============================================
 model Project {
-  id          String   @id
-  name        String
-  description String?
-  teamId      String
+  id          String   @id @default(uuid())
+  name        String                                // Tên dự án
+  description String?                               // Mô tả
+  teamId      String                               // Foreign key to Team
   createdAt   DateTime @default(now())
   updatedAt   DateTime
+  
   Team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  @@map("Project")
 }
 
+// ============================================
+// INVITATION MODEL (Lời mời)
+// ============================================
 model Invitation {
-  id        String   @id
-  email     String
-  token     String   @unique
-  teamId    String
-  role      String   @default("MEMBER")
-  expiresAt DateTime
+  id        String   @id @default(uuid())
+  email     String                               // Email được mời
+  token     String   @unique                      // Token để accept invitation
+  teamId    String                               // Team được mời
+  role      String   @default("MEMBER")          // Role khi accept
+  expiresAt DateTime                              // Hết hạn sau...
   createdAt DateTime @default(now())
+  
   Team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-
-  @@index([email])
+  
+  @@index([email])    // Index để query theo email nhanh hơn
   @@index([token])
+  @@map("Invitation")
+}
+
+// ============================================
+// REFRESH TOKEN MODEL
+// ============================================
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique                      // Token string (UUID)
+  userId    String                               // Foreign key to User
+  expiresAt DateTime                              // Hết hạn
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)             // Đã bị revoke chưa
+  
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([token])   // Index để query theo token nhanh
+  @@index([userId])
+  @@map("RefreshToken")
+}
+
+// ============================================
+// VERIFICATION TOKEN MODEL
+// ============================================
+model VerificationToken {
+  id         String   @id @default(uuid())
+  identifier String                                // Email của user
+  token      String   @unique                    // Token value
+  type       String                                // 'EMAIL_VERIFICATION' | 'PASSWORD_RESET'
+  expires    DateTime                              // Hết hạn
+  createdAt  DateTime @default(now())
+  
+  User       User?    @relation(fields: [identifier], references: [email], onDelete: Cascade)
+  
+  @@index([identifier])
+  @@index([token])
+  @@map("VerificationToken")
 }

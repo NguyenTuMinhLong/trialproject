@@ -1,83 +1,75 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import dotenv from 'dotenv';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import authRoutes from './routes/auth.js';
+/**
+ * ============================================
+ * SASSY APP - SERVER ENTRY POINT
+ * ============================================
+ * 
+ * File này là điểm khởi đầu của server Express.
+ * Nó cấu hình:
+ * - Middleware (CORS, Helmet, JSON parsing)
+ * - Routes (Auth)
+ * - Database connection (Prisma)
+ * 
+ * Server chạy trên port 3000 (hoặc PORT trong .env)
+ */
 
+// Import các thư viện cần thiết
+import express from 'express';        // Framework web
+import cors from 'cors';             // Cross-Origin Resource Sharing
+import helmet from 'helmet';         // Bảo mật HTTP headers
+import dotenv from 'dotenv';          // Đọc biến môi trường từ .env
+import authRoutes from './routes/auth.js'; // Import routes xác thực
+
+// Load biến môi trường từ file .env
 dotenv.config();
 
+// Tạo instance Express
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// In-memory users
-let users: any[] = [];
+// ============================================
+// CẤU HÌNH MIDDLEWARE
+// ============================================
 
+// Helmet: Thêm các HTTP headers bảo mật
+// Giúp bảo vệ app khỏi các tấn công XSS, clickjacking, v.v.
 app.use(helmet());
-app.use(cors());
+
+// CORS: Cho phép frontend (localhost:5173) gọi API
+// credentials: true cho phép gửi cookies/authorization headers
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  credentials: true
+}));
+
+// Express JSON: Parse JSON body từ request
 app.use(express.json());
-app.use('/api/auth', authRoutes);
 
 console.log('🚀 Server khởi động...');
 
-// AUTH ROUTES (KHÔNG có /api vì proxy đã rewrite)
-app.post('/auth/register', async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    if (users.find(u => u.email === email)) {
-      return res.status(400).json({ message: 'Email đã tồn tại' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = { 
-      id: Date.now().toString(), 
-      name, 
-      email, 
-      password: hashedPassword 
-    };
-    users.push(newUser);
-
-    console.log(`✅ User registered: ${email}`);
-    res.status(201).json({ 
-      message: 'Đăng ký thành công', 
-      user: { id: newUser.id, name, email } 
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi server' });
-  }
+// ============================================
+// HEALTH CHECK ENDPOINT
+// ============================================
+// Endpoint để kiểm tra server có đang chạy không
+// VD: Load balancer hoặc monitoring tool có thể gọi endpoint này
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString() 
+  });
 });
 
-app.post('/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = users.find(u => u.email === email);
+// ============================================
+// MOUNT ROUTES
+// ============================================
+// Tất cả routes xác thực được mount tại /auth
+// VD: /auth/login, /auth/register, /auth/logout, v.v.
+app.use('/auth', authRoutes);
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(400).json({ message: 'Email hoặc mật khẩu sai' });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      'secretkey-super-long-123456789',
-      { expiresIn: '7d' }
-    );
-
-    console.log(`✅ User logged in: ${email}`);
-    res.json({ 
-      message: 'Đăng nhập thành công', 
-      token,
-      user: { id: user.id, name: user.name, email: user.email }
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi server' });
-  }
-});
-
-app.get('/', (req, res) => res.json({ message: '🚀 Server SaaS đang chạy ngon lành!' }));
-app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
-
+// ============================================
+// KHỞI ĐỘNG SERVER
+// ============================================
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server chạy tại http://localhost:${PORT}`);
-  console.log('✅ Auth routes sẵn sàng: /auth/register và /auth/login');
+  console.log(`✅ PostgreSQL: ${process.env.DATABASE_URL}`);
+  console.log('✅ Auth routes: /auth/register, /auth/login, /auth/logout, /auth/refresh, /auth/me');
 });
