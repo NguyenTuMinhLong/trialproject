@@ -13,9 +13,10 @@
  * - /profile - Hồ sơ (cần đăng nhập)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { authAPI } from './lib/api';
 
@@ -27,6 +28,11 @@ import TwoFAPage from './pages/auth/TwoFAPage';
 // Main Pages
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
+import TeamsPage from './pages/teams/TeamsPage';
+import TeamDetailPage from './pages/teams/TeamDetailPage';
+import InvitePage from './pages/teams/InvitePage';
+import ProjectsPage from './pages/projects/ProjectsPage';
+import ProjectDetailPage from './pages/projects/ProjectDetailPage';
 
 /**
  * App Component
@@ -36,9 +42,10 @@ import ProfilePage from './pages/ProfilePage';
  */
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
           {/* === PUBLIC ROUTES === */}
           
           {/* Trang đăng nhập */}
@@ -88,9 +95,51 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Teams */}
+          <Route
+            path="/teams"
+            element={
+              <ProtectedRoute>
+                <TeamsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/teams/:id"
+            element={
+              <ProtectedRoute>
+                <TeamDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Invite Accept (public) */}
+          <Route path="/teams/invite" element={<InvitePage />} />
+
+          {/* Projects */}
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute>
+                <ProjectsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/projects/:id"
+            element={
+              <ProtectedRoute>
+                <ProjectDetailPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
@@ -127,14 +176,14 @@ function ForgotPasswordPage() {
   // Đã gửi email thành công
   if (sent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md text-center">
           <div className="text-5xl mb-4">📧</div>
-          <h1 className="text-2xl font-bold mb-4">Kiểm tra email!</h1>
-          <p className="text-gray-600 mb-6">
+          <h1 className="text-2xl font-bold mb-4 dark:text-white">Kiểm tra email!</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
             Chúng tôi đã gửi hướng dẫn đặt lại mật khẩu đến email {email}.
           </p>
-          <a href="/auth/login" className="text-blue-600 hover:underline">
+          <a href="/auth/login" className="text-blue-600 dark:text-blue-400 hover:underline">
             Quay lại đăng nhập
           </a>
         </div>
@@ -144,26 +193,26 @@ function ForgotPasswordPage() {
 
   // Form nhập email
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">Quên mật khẩu?</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-6 text-center dark:text-white">Quên mật khẩu?</h1>
         
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
               placeholder="you@example.com"
               required
             />
@@ -177,8 +226,8 @@ function ForgotPasswordPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
-          <a href="/auth/login" className="text-blue-600 hover:underline">
+        <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+          <a href="/auth/login" className="text-blue-600 dark:text-blue-400 hover:underline">
             Quay lại đăng nhập
           </a>
         </p>
@@ -238,13 +287,13 @@ function ResetPasswordPage() {
   // Token không hợp lệ
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
-          <h1 className="text-2xl font-bold mb-4 text-red-600">Token không hợp lệ</h1>
-          <p className="text-gray-600 mb-6">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md text-center">
+          <h1 className="text-2xl font-bold mb-4 text-red-600 dark:text-red-400">Token không hợp lệ</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
             Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.
           </p>
-          <a href="/auth/forgot-password" className="text-blue-600 hover:underline">
+          <a href="/auth/forgot-password" className="text-blue-600 dark:text-blue-400 hover:underline">
             Yêu cầu link mới
           </a>
         </div>
@@ -255,11 +304,11 @@ function ResetPasswordPage() {
   // Đặt lại thành công
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md text-center">
           <div className="text-5xl mb-4">✅</div>
-          <h1 className="text-2xl font-bold mb-4">Thành công!</h1>
-          <p className="text-gray-600 mb-6">
+          <h1 className="text-2xl font-bold mb-4 dark:text-white">Thành công!</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
             Mật khẩu của bạn đã được đặt lại thành công.
           </p>
           <a href="/auth/login" className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
@@ -272,40 +321,40 @@ function ResetPasswordPage() {
 
   // Form nhập mật khẩu mới
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">Đặt lại mật khẩu</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-6 text-center dark:text-white">Đặt lại mật khẩu</h1>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Mật khẩu mới
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
               placeholder="Ít nhất 8 ký tự"
               required
               minLength={8}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Xác nhận mật khẩu
             </label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
               placeholder="Nhập lại mật khẩu"
               required
             />
@@ -342,8 +391,8 @@ function OAuthSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="text-center dark:text-white">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
         <p>Đang đăng nhập...</p>
       </div>
@@ -370,16 +419,16 @@ function OAuthErrorPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md text-center">
         <div className="text-5xl mb-4">❌</div>
-        <h1 className="text-2xl font-bold mb-4">Đăng nhập thất bại</h1>
-        <p className="text-gray-600 mb-6">
+        <h1 className="text-2xl font-bold mb-4 dark:text-white">Đăng nhập thất bại</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
           {errorMessages[message || ''] || 'Đã xảy ra lỗi không xác định'}
         </p>
         <a
           href="/auth/login"
-          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 inline-block"
         >
           Thử lại
         </a>

@@ -102,7 +102,7 @@ model Team {
   name       String                                // Tên team
   ownerId    String                               // User ID của chủ team
   createdAt  DateTime     @default(now())
-  updatedAt  DateTime
+  updatedAt  DateTime     @updatedAt
   
   // Relations
   Invitation Invitation[]                          // Lời mời
@@ -139,7 +139,7 @@ model Project {
   description String?                               // Mô tả
   teamId      String                               // Foreign key to Team
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
   
   Team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   

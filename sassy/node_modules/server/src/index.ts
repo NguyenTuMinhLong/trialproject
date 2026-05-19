@@ -18,6 +18,8 @@ import cors from 'cors';             // Cross-Origin Resource Sharing
 import helmet from 'helmet';         // Bảo mật HTTP headers
 import dotenv from 'dotenv';          // Đọc biến môi trường từ .env
 import authRoutes from './routes/auth.js'; // Import routes xác thực
+import teamRoutes from './routes/team.js'; // Import routes teams
+import projectRoutes from './routes/project.js'; // Import routes projects
 
 // Load biến môi trường từ file .env
 dotenv.config();
@@ -64,6 +66,12 @@ app.get('/health', (req, res) => {
 // VD: /auth/login, /auth/register, /auth/logout, v.v.
 app.use('/auth', authRoutes);
 
+// Teams routes: /teams, /teams/:id, /teams/:id/invite, v.v.
+app.use('/teams', teamRoutes);
+
+// Projects routes: /projects, /projects/:id
+app.use('/projects', projectRoutes);
+
 // ============================================
 // KHỞI ĐỘNG SERVER
 // ============================================
@@ -71,5 +79,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server chạy tại http://localhost:${PORT}`);
   console.log(`✅ PostgreSQL: ${process.env.DATABASE_URL}`);
-  console.log('✅ Auth routes: /auth/register, /auth/login, /auth/logout, /auth/refresh, /auth/me');
+  console.log('✅ Routes: /auth/*, /teams/*, /projects/*');
 });

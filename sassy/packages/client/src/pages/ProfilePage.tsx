@@ -11,6 +11,7 @@
  */
 
 import { useState } from 'react';
+import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../lib/api';
 
@@ -97,7 +98,8 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8">
+    <Layout>
+    <div className="py-8">
       <div className="max-w-2xl mx-auto px-4">
         <h1 className="text-3xl font-bold mb-8">Hồ sơ cá nhân</h1>
 
@@ -318,5 +320,6 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+    </Layout>
   );
 }

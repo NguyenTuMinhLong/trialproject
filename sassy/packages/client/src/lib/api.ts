@@ -175,4 +175,151 @@ export const githubOAuth = () => {
   window.location.href = `${API_BASE_URL}/auth/github`;
 };
 
+// ============================================
+// TEAM API
+// ============================================
+
+export interface Team {
+  id: string;
+  name: string;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+  memberRole?: string;
+  _count?: {
+    TeamMember: number;
+    Project: number;
+  };
+}
+
+export interface TeamMember {
+  id: string;
+  role: string;
+  createdAt: string;
+  User: User;
+}
+
+export interface TeamInvitation {
+  id: string;
+  token: string;
+  role: string;
+  expiresAt: string;
+  team: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  teamId: string;
+  createdAt: string;
+  updatedAt: string;
+  Team?: {
+    id: string;
+    name: string;
+  };
+  userRole?: string;
+}
+
+export const teamAPI = {
+  // Create team
+  create: async (name: string): Promise<{ message: string; team: Team }> => {
+    const response = await api.post('/teams', { name });
+    return response.data;
+  },
+
+  // List all teams (owned + joined)
+  list: async (): Promise<{ ownedTeams: Team[]; joinedTeams: Team[] }> => {
+    const response = await api.get('/teams');
+    return response.data;
+  },
+
+  // Get team details
+  get: async (teamId: string): Promise<{ team: any; userRole: string }> => {
+    const response = await api.get(`/teams/${teamId}`);
+    return response.data;
+  },
+
+  // Update team
+  update: async (teamId: string, name: string): Promise<{ message: string; team: Team }> => {
+    const response = await api.put(`/teams/${teamId}`, { name });
+    return response.data;
+  },
+
+  // Delete team
+  delete: async (teamId: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/teams/${teamId}`);
+    return response.data;
+  },
+
+  // Invite member
+  invite: async (teamId: string, email: string, role?: string): Promise<any> => {
+    const response = await api.post(`/teams/${teamId}/invite`, { email, role });
+    return response.data;
+  },
+
+  // Accept invitation
+  acceptInvite: async (token: string): Promise<{ message: string; team: { id: string; name: string; role: string } }> => {
+    const response = await api.post('/teams/accept', { token });
+    return response.data;
+  },
+
+  // List pending invitations
+  getInvitations: async (): Promise<{ invitations: TeamInvitation[] }> => {
+    const response = await api.get('/teams/invitations');
+    return response.data;
+  },
+
+  // Remove member
+  removeMember: async (teamId: string, memberId: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/teams/${teamId}/members/${memberId}`);
+    return response.data;
+  },
+
+  // Update member role
+  updateMemberRole: async (teamId: string, memberId: string, role: string): Promise<any> => {
+    const response = await api.put(`/teams/${teamId}/members/${memberId}`, { role });
+    return response.data;
+  },
+};
+
+// ============================================
+// PROJECT API
+// ============================================
+
+export const projectAPI = {
+  // Create project
+  create: async (data: { name: string; description?: string; teamId: string }): Promise<{ message: string; project: Project }> => {
+    const response = await api.post('/projects', data);
+    return response.data;
+  },
+
+  // List all accessible projects
+  list: async (): Promise<{ projects: Project[] }> => {
+    const response = await api.get('/projects');
+    return response.data;
+  },
+
+  // Get project details
+  get: async (projectId: string): Promise<any> => {
+    const response = await api.get(`/projects/${projectId}`);
+    return response.data;
+  },
+
+  // Update project
+  update: async (projectId: string, data: { name?: string; description?: string }): Promise<{ message: string; project: Project }> => {
+    const response = await api.put(`/projects/${projectId}`, data);
+    return response.data;
+  },
+
+  // Delete project
+  delete: async (projectId: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/projects/${projectId}`);
+    return response.data;
+  },
+};
+
 export default api;

@@ -44,6 +44,8 @@ import {
   encryptSecret,
   decryptSecret
 } from '../services/twoFactor.js';
+import { loginRateLimiter, registerRateLimiter } from '../middleware/rateLimit.js';
+import { validatePassword, containsPersonalInfo } from '../utils/password.js';
 
 // Tạo router Express
 const router = Router();
@@ -141,13 +143,35 @@ async function revokeToken(tokenId: string) {
  * - 201: Đăng ký thành công, trả về tokens và user info
  * - 400: Thiếu thông tin hoặc email đã tồn tại
  */
-router.post('/register', async (req, res) => {
+router.post('/register', registerRateLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     // Validate input
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Email không hợp lệ' });
+    }
+
+    // Validate password theo chuẩn bảo mật
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        message: 'Mật khẩu không đủ mạnh',
+        errors: passwordValidation.errors
+      });
+    }
+
+    // Kiểm tra password có chứa thông tin cá nhân không
+    if (containsPersonalInfo(password, name, email)) {
+      return res.status(400).json({ 
+        message: 'Mật khẩu không được chứa tên hoặc email của bạn'
+      });
     }
 
     // Kiểm tra email đã tồn tại chưa
@@ -205,7 +229,7 @@ router.post('/register', async (req, res) => {
  * - 200 + requires2FA: Cần verify 2FA (nếu user bật 2FA)
  * - 400: Email hoặc password sai
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 

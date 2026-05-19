@@ -14,6 +14,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { authAPI, googleOAuth, githubOAuth } from '../../lib/api';
 
 /**
@@ -22,6 +23,7 @@ import { authAPI, googleOAuth, githubOAuth } from '../../lib/api';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { toggleTheme, isDark } = useTheme();
 
   // Form state
   const [email, setEmail] = useState('');
@@ -78,28 +80,27 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Gọi API verify 2FA
-      await authAPI.verify2FA(
+      // Gọi API verify 2FA - server sẽ trả về tokens mới
+      const response = await authAPI.verify2FA(
         email,
         password,
         useBackupCode ? undefined : twoFactorCode,
         useBackupCode ? backupCode : undefined
       );
 
-      // 2FA thành công, lấy user info và redirect
-      const response = await authAPI.me();
-      
-      // Lưu tokens (từ bước login trước đó)
-      const accessToken = localStorage.getItem('accessToken');
-      const refreshToken = localStorage.getItem('refreshToken');
-      
-      if (accessToken && refreshToken) {
-        navigate('/dashboard');
+      // Lưu tokens mới vào localStorage
+      if (response.accessToken) {
+        localStorage.setItem('accessToken', response.accessToken);
       }
+      if (response.refreshToken) {
+        localStorage.setItem('refreshToken', response.refreshToken);
+      }
+
+      // Chuyển hướng về dashboard
+      navigate('/dashboard');
 
     } catch (err: any) {
       setError(err.response?.data?.message || 'Mã xác thực không đúng');
-    } finally {
       setLoading(false);
     }
   };
@@ -121,15 +122,36 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        {/* Header */}
-        <h1 className="text-2xl font-bold text-center mb-2">Đăng nhập</h1>
-        <p className="text-gray-600 text-center mb-6">
+        {/* Header with theme toggle */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex-1"></div>
+          <h1 className="text-2xl font-bold text-center">Đăng nhập</h1>
+          <div className="flex-1 flex justify-end">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title={isDark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
+            >
+              {isDark ? (
+                <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+        <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
           Chào mừng bạn quay trở lại!
         </p>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
@@ -138,7 +160,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Email
             </label>
             <input
@@ -146,7 +168,7 @@ export default function LoginPage() {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder="you@example.com"
               required
             />
@@ -154,7 +176,7 @@ export default function LoginPage() {
 
           {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Mật khẩu
             </label>
             <input
@@ -162,59 +184,55 @@ export default function LoginPage() {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder="••••••••"
               required
             />
           </div>
 
-          {/* 2FA Section - Hiển thị khi cần xác thực 2FA */}
+          {/* 2FA Section - Đơn giản hóa UI */}
           {requires2FA && (
             <div className="border-t pt-4 mt-4">
-              <p className="text-sm text-gray-600 mb-2">
-                Vui lòng nhập mã từ ứng dụng xác thực:
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Nhập mã từ ứng dụng xác thực:
               </p>
-              
-              {/* Toggle between TOTP and Backup Code */}
-              <div className="flex gap-4 mb-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    checked={!useBackupCode}
-                    onChange={() => setUseBackupCode(false)}
-                    className="mr-2"
-                  />
-                  Mã từ app
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    checked={useBackupCode}
-                    onChange={() => setUseBackupCode(true)}
-                    className="mr-2"
-                  />
-                  Mã dự phòng
-                </label>
-              </div>
 
-              {useBackupCode ? (
+              {/* Input mã 6 số - luôn hiển thị */}
+              {!useBackupCode ? (
                 <input
                   type="text"
-                  value={backupCode}
-                  onChange={(e) => setBackupCode(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Mã dự phòng (VD: A1B2C3D4E5)"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white"
+                  placeholder="Mã 6 số"
+                  maxLength={6}
+                  autoFocus
                 />
               ) : (
                 <input
                   type="text"
-                  value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Mã 6 số"
-                  maxLength={6}
+                  value={backupCode}
+                  onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white"
+                  placeholder="Mã dự phòng (VD: A1B2C3D4E5)"
+                  autoFocus
                 />
               )}
+
+              {/* Link chuyển đổi giữa mã app và mã dự phòng */}
+              <button
+                type="button"
+                onClick={() => {
+                  setUseBackupCode(!useBackupCode);
+                  setTwoFactorCode('');
+                  setBackupCode('');
+                }}
+                className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {useBackupCode ? '← Dùng mã từ app' : 'Dùng mã dự phòng?'}
+              </button>
             </div>
           )}
 
@@ -230,7 +248,7 @@ export default function LoginPage() {
 
         {/* Forgot Password Link */}
         <div className="mt-4 text-center">
-          <Link to="/auth/forgot-password" className="text-blue-600 hover:underline text-sm">
+          <Link to="/auth/forgot-password" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
             Quên mật khẩu?
           </Link>
         </div>
@@ -238,10 +256,10 @@ export default function LoginPage() {
         {/* Divider */}
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Hoặc đăng nhập với</span>
+            <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">Hoặc đăng nhập với</span>
           </div>
         </div>
 
@@ -250,7 +268,7 @@ export default function LoginPage() {
           {/* Google */}
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 py-2 px-4 rounded-md hover:bg-gray-50"
+            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 py-2 px-4 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -276,7 +294,7 @@ export default function LoginPage() {
           {/* GitHub */}
           <button
             onClick={handleGithubLogin}
-            className="w-full flex items-center justify-center gap-3 bg-gray-800 text-white py-2 px-4 rounded-md hover:bg-gray-900"
+            className="w-full flex items-center justify-center gap-3 bg-gray-800 dark:bg-gray-900 text-white py-2 px-4 rounded-md hover:bg-gray-900 dark:hover:bg-gray-700"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path
@@ -290,9 +308,9 @@ export default function LoginPage() {
         </div>
 
         {/* Register Link */}
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
           Chưa có tài khoản?{' '}
-          <Link to="/auth/register" className="text-blue-600 hover:underline">
+          <Link to="/auth/register" className="text-blue-600 dark:text-blue-400 hover:underline">
             Đăng ký ngay
           </Link>
         </p>

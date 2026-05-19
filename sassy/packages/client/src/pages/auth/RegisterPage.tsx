@@ -39,12 +39,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // Validate password length
-    if (password.length < 8) {
-      setError('Mật khẩu phải ít nhất 8 ký tự');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -55,7 +49,13 @@ export default function RegisterPage() {
       navigate('/dashboard');
 
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng ký thất bại');
+      // Hiển thị validation errors từ backend nếu có
+      const errors = err.response?.data?.errors;
+      if (errors && Array.isArray(errors)) {
+        setError(errors.join('\n'));
+      } else {
+        setError(err.response?.data?.message || 'Đăng ký thất bại');
+      }
     } finally {
       setLoading(false);
     }
@@ -126,6 +126,14 @@ export default function RegisterPage() {
               required
               minLength={8}
             />
+            {/* Password requirements */}
+            <div className="mt-1 text-xs text-gray-500 space-y-0.5">
+              <p className={password.length >= 8 ? 'text-green-600' : ''}>✓ Ít nhất 8 ký tự</p>
+              <p className={/[A-Z]/.test(password) ? 'text-green-600' : ''}>✓ Ít nhất 1 chữ hoa (A-Z)</p>
+              <p className={/[a-z]/.test(password) ? 'text-green-600' : ''}>✓ Ít nhất 1 chữ thường (a-z)</p>
+              <p className={/[0-9]/.test(password) ? 'text-green-600' : ''}>✓ Ít nhất 1 số (0-9)</p>
+              <p className={/[!@#$%^&*]/.test(password) ? 'text-green-600' : ''}>✓ Ít nhất 1 ký tự đặc biệt (!@#$%^&*)</p>
+            </div>
           </div>
 
           {/* Confirm Password */}
